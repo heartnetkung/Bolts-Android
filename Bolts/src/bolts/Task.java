@@ -216,38 +216,59 @@ public class Task<TResult> {
     });
   }
 
-  /**
-   * Invokes the callable on a background thread using the default thread pool, returning a Task to
-   * represent the operation.
-   */
-  public static <TResult> Task<TResult> callInBackground(Callable<TResult> callable) {
-    return call(callable, backgroundExecutor);
-  }
+	/**
+	 * Invokes the callable on a background thread using the default thread
+	 * pool, returning a Task to represent the operation.
+	 */
+	public static <TResult> Task<TResult> callInBackground(Callable<TResult> callable) {
+		return post(callable, backgroundExecutor).getTask();
+	}
+
+	/**
+	 * Invokes the callable using the given executor, returning a Task to
+	 * represent the operation.
+	 */
+	public static <TResult> Task<TResult> call(final Callable<TResult> callable, Executor executor) {
+		return post(callable, executor).getTask();
+	}
+
+	/**
+	 * Invokes the callable on the current thread, producing a Task.
+	 */
+	public static <TResult> Task<TResult> call(final Callable<TResult> callable) {
+		return post(callable, immediateExecutor).getTask();
+	}
 
   /**
-   * Invokes the callable using the given executor, returning a Task to represent the operation.
-   */
-  public static <TResult> Task<TResult> call(final Callable<TResult> callable, Executor executor) {
-    final Task<TResult>.TaskCompletionSource tcs = Task.<TResult> create();
-    executor.execute(new Runnable() {
-      public void run() {
-        try {
-          tcs.setResult(callable.call());
-        } catch (Exception e) {
-          tcs.setError(e);
-        }
-      }
-    });
-    return tcs.getTask();
-  }
+	 * similar to call but return TaskCompletionSource
+	 */
+	public static <TResult> Task<TResult>.TaskCompletionSource post(final Callable<TResult> callable, Executor executor) {
+		final Task<TResult>.TaskCompletionSource tcs = Task.<TResult> create();
+		executor.execute(new Runnable() {
+			public void run() {
+				try {
+					tcs.setResult(callable.call());
+				} catch (Exception e) {
+					tcs.trySetError(e);
+				}
+			}
+		});
+		return tcs;
+	}
 
-  /**
-   * Invokes the callable on the current thread, producing a Task.
-   */
-  public static <TResult> Task<TResult> call(final Callable<TResult> callable) {
-    return call(callable, immediateExecutor);
-  }
+	/**
+	 * similar to call but return TaskCompletionSource
+	 */
+	public static <TResult> Task<TResult>.TaskCompletionSource post(final Callable<TResult> callable) {
+		return post(callable, immediateExecutor);
+	}
 
+	/**
+	 * similar to call but return TaskCompletionSource
+	 */
+	public static <TResult> Task<TResult>.TaskCompletionSource postInBackground(Callable<TResult> callable) {
+		return post(callable, backgroundExecutor);
+	}
   /**
    * Creates a task that completes when all of the provided tasks are complete.
    */
